@@ -1,0 +1,46 @@
+{
+  "projectSettings": {
+    "code": "IS_456_2000",
+    "units": { "length": "m", "force": "kN" }
+  },
+  "grids": {
+    "xSpacing": [4.0, 3.5, 5.0],
+    "ySpacing": [4.0, 4.0]
+  },
+  "stories": [
+    { "id": "ST1", "name": "Plinth", "height": 1.5, "elevation": 1.5, "isMaster": false, "similarTo": "None" },
+    { "id": "ST2", "name": "Story 1", "height": 3.0, "elevation": 4.5, "isMaster": true, "similarTo": "None" }
+  ],
+  "materials": {
+    "concrete": [
+      { "id": "M25", "fck": 25, "E": 25000000, "poisson": 0.2, "gamma": 25 }
+    ],
+    "rebar": [
+      { "id": "Fe500", "fy": 500, "E": 200000000 }
+    ]
+  },
+  "sections": {
+    "columns": [
+      { "id": "C_230x450", "b": 0.23, "d": 0.45, "material": "M25", "rebar": "Fe500" }
+    ],
+    "beams": [
+      { "id": "B_230x300", "b": 0.23, "d": 0.30, "material": "M25", "rebar": "Fe500" }
+    ],
+    "slabs": [
+      { "id": "S_150", "h": 0.15, "material": "M25", "rebar": "Fe500" }
+    ]
+  },
+  "nodes": [],
+  "elements": {
+    "columns": [],
+    "beams": [],
+    "slabs": []
+  },
+  "supports": [],
+  "loads": {
+    "surface": [
+      { "slabId": "slab_1", "type": "DEAD", "value": 1.5 },
+      { "slabId": "slab_1", "type": "LIVE", "value": 3.0 }
+    ]
+  }
+}
