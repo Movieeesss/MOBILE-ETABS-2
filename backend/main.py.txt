@@ -1,0 +1,57 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Dict, Any
+
+app = FastAPI(title="Mobile-ETABS Analysis Engine (IS 456:2000)")
+
+class ModelSchema(BaseModel):
+    projectSettings: Dict[str, Any]
+    stories: List[Dict[str, Any]]
+    materials: Dict[str, Any]
+    sections: Dict[str, Any]
+    loads: Dict[str, Any]
+
+@app.get("/")
+def read_root():
+    return {"status": "Engine is running", "code": "IS 456:2000"}
+
+@app.post("/analyze")
+def run_analysis_and_design(model: ModelSchema):
+    try:
+        # 1. Parsing the React State (Schema)
+        print(f"Received model with {len(model.stories)} stories.")
+        
+        # 2. IS 456:2000 Dummy Design Calculation (Limit State Method)
+        # Bending Moment = wl^2 / 8 (Simplified for demo)
+        # Mu = 0.87 * fy * Ast * d * (1 - (Ast * fy)/(b * d * fck))
+        
+        fck = 25 # M25
+        fy = 500 # Fe500
+        b = 230  # mm
+        d = 450  # mm
+        
+        # Ast minimum check (IS 456 Clause 26.5.1.1)
+        ast_min = (0.85 * b * d) / fy
+        
+        # Dummy Response mimicking standard ETABS output
+        return {
+            "status": "success",
+            "message": "Analysis & IS 456 Design Complete",
+            "results": {
+                "max_displacement_mm": 12.5,
+                "critical_beam": {
+                    "id": "B1",
+                    "Mu_kNm": 145.2,
+                    "Ast_required_mm2": max(650.0, ast_min),
+                    "status": "SAFE"
+                },
+                "critical_column": {
+                    "id": "C1",
+                    "Pu_kN": 1250,
+                    "pt_required": 1.2, # percentage
+                    "status": "SAFE"
+                }
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
