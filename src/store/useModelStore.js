@@ -1,4 +1,3 @@
-// src/store/useModelStore.js
 import { create } from 'zustand';
 
 export const useModelStore = create((set) => ({
