@@ -1,4 +1,3 @@
-// src/components/PlanCanvas.jsx
 import React, { useState } from 'react';
 import { useModelStore } from '../store/useModelStore';
 
@@ -14,7 +13,7 @@ const PlanCanvas = () => {
   // Calculate Grid Coordinates
   let cx = 0; const gridX = [0, ...xSpacing.map(dx => cx += dx)];
   let cy = 0; const gridY = [0, ...ySpacing.map(dy => cy += dy)];
-  const scale = 50; 
+  const scale = 50; // 1 meter = 50 pixels
 
   const currentElevation = stories.find(s => s.id === currentStoryId)?.elevation || 0;
 
@@ -22,7 +21,7 @@ const PlanCanvas = () => {
   const getOrCreateNode = (x, y, z) => {
     let existing = nodes.find(n => n.x === x && n.y === y && n.z === z);
     if (!existing) {
-      const newNode = { id: `N_${Date.now()}`, x, y, z };
+      const newNode = { id: `N_${Date.now()}_${Math.floor(Math.random()*1000)}`, x, y, z };
       addNode(newNode);
       return newNode;
     }
@@ -39,7 +38,6 @@ const PlanCanvas = () => {
     const snappedY = gridY.reduce((prev, curr) => Math.abs(curr - clickY) < Math.abs(prev - clickY) ? curr : prev);
 
     if (drawMode === 'column') {
-      // Columns are drawn vertically from story below to current story
       const storyBelowIndex = stories.findIndex(s => s.id === currentStoryId) - 1;
       if (storyBelowIndex < 0) {
           alert("Cannot draw column on the Base level.");
@@ -55,15 +53,13 @@ const PlanCanvas = () => {
           endNodeId: nodeTop.id,
           sectionId: currentSectionId
       });
-      // Columns are point clicks in plan view, no need for start/end points
     } 
     else if (drawMode === 'beam') {
-      // Beams require a start point and end point
       const node = getOrCreateNode(snappedX, snappedY, currentElevation);
       if (!startNode) {
         setStartNode(node);
       } else {
-        if (startNode.id !== node.id) { // Prevent zero-length beams
+        if (startNode.id !== node.id) { 
             addBeam({
                 id: `B_${Date.now()}`,
                 startNodeId: startNode.id,
@@ -71,24 +67,21 @@ const PlanCanvas = () => {
                 sectionId: currentSectionId
             });
         }
-        setStartNode(null); // Reset for next beam
+        setStartNode(null); 
       }
     }
   };
 
-  // Helper to get pixel coordinates for a node
   const getXY = (nodeId) => {
       const node = nodes.find(n => n.id === nodeId);
       return node ? { cx: node.x * scale, cy: node.y * scale } : {cx:0, cy:0};
   };
 
-  // Filter beams belonging to the current story
   const storyBeams = beams.filter(b => {
       const n = nodes.find(n => n.id === b.startNodeId);
       return n && n.z === currentElevation;
   });
 
-  // Filter columns reaching the current story
   const storyColumns = columns.filter(c => {
       const topNode = nodes.find(n => n.id === c.endNodeId);
       return topNode && topNode.z === currentElevation;
@@ -104,7 +97,7 @@ const PlanCanvas = () => {
       <div className="relative bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-2xl">
         <svg width={800} height={600} onClick={handleSVGClick} className="cursor-crosshair bg-[#0a0f1c]">
           
-          {/* Draw Grid Lines */}
+          {/* Grid Lines */}
           {gridX.map((x, i) => (
             <line key={`vx-${i}`} x1={x * scale} y1={0} x2={x * scale} y2={600} stroke="#334155" strokeWidth="1" strokeDasharray="4" />
           ))}
@@ -112,7 +105,7 @@ const PlanCanvas = () => {
             <line key={`hy-${i}`} x1={0} y1={y * scale} x2={800} y2={y * scale} stroke="#334155" strokeWidth="1" strokeDasharray="4" />
           ))}
 
-          {/* Draw Columns (as squares in plan view) */}
+          {/* Draw Columns */}
           {storyColumns.map((c) => {
               const pos = getXY(c.endNodeId);
               return <rect key={c.id} x={pos.cx - 8} y={pos.cy - 8} width="16" height="16" fill="#3b82f6" opacity="0.8" />
@@ -125,7 +118,7 @@ const PlanCanvas = () => {
             return <line key={b.id} x1={start.cx} y1={start.cy} x2={end.cx} y2={end.cy} stroke="#22c55e" strokeWidth="6" strokeLinecap="round" opacity="0.8"/>
           })}
 
-          {/* Draw active beam start node */}
+          {/* Active node indicator */}
           {startNode && drawMode === 'beam' && (
             <circle cx={startNode.x * scale} cy={startNode.y * scale} r="6" fill="#ef4444" />
           )}
