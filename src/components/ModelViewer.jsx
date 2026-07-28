@@ -2,12 +2,17 @@ import React from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Line } from '@react-three/drei';
 import * as THREE from 'three';
-import schema from '../data/schema.json'; // Reading from new schema
+import { useModelStore } from '../store/useModelStore';
 
 const ModelViewer = () => {
-  // Generate 3D Grid from schema
-  const { xSpacing, ySpacing } = schema.grids;
-  const stories = schema.stories;
+  // Read dynamic grids from store
+  const { xSpacing, ySpacing } = useModelStore();
+  
+  // Dummy stories for now
+  const stories = [
+    { id: "ST1", elevation: 1.5 },
+    { id: "ST2", elevation: 4.5 }
+  ];
   
   // Calculate cumulative distances for grid lines
   let currentX = 0;
@@ -26,7 +31,7 @@ const ModelViewer = () => {
         {/* Draw 3D Base Grid */}
         <gridHelper args={[30, 30, '#1e293b', '#0f172a']} position={[0, 0, 0]} />
 
-        {/* Render Columns at grid intersections up to story heights */}
+        {/* Render Columns */}
         {gridX.map((x, ix) => 
           gridY.map((y, iy) => (
             <group key={`col-${ix}-${iy}`}>
@@ -39,10 +44,10 @@ const ModelViewer = () => {
           ))
         )}
 
-        {/* Render Floor Slabs (Translucent planes at story elevations) */}
+        {/* Render Floor Slabs */}
         {stories.map((story) => (
           <mesh key={story.id} position={[gridX[gridX.length-1]/2, story.elevation, gridY[gridY.length-1]/2]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[gridX[gridX.length-1], gridY[gridY.length-1]]} />
+            <planeGeometry args={[gridX[gridX.length-1] || 1, gridY[gridY.length-1] || 1]} />
             <meshBasicMaterial color="#94a3b8" transparent opacity={0.2} side={THREE.DoubleSide} />
           </mesh>
         ))}
