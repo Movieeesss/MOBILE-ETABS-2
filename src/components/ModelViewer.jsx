@@ -1,102 +1,53 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Line, Html } from '@react-three/drei';
+import { OrbitControls, Line } from '@react-three/drei';
 import * as THREE from 'three';
-import { useModelStore } from '../store/useModelStore';
-import dummyModel from '../data/dummyModel.json';
-
-const mapCoords = (node, disp = { dx: 0, dy: 0, dz: 0 }, scale = 1) => {
-  return [
-    node.x + disp.dx * scale,
-    node.z + disp.dz * scale,
-    node.y + disp.dy * scale,
-  ];
-};
+import schema from '../data/schema.json'; // Reading from new schema
 
 const ModelViewer = () => {
-  const { 
-    loadCase, resultType, showColumns, showBeams, showSlabs, 
-    deformationScale, diagramScale 
-  } = useModelStore();
-
-  const { nodes, frames, slabs, results } = dummyModel;
-  const currentResults = results[loadCase] || { displacements: {}, frameForces: {} };
-
-  const getFrameLine = (frame) => {
-    const startNode = nodes.find((n) => n.id === frame.startNode);
-    const endNode = nodes.find((n) => n.id === frame.endNode);
-    
-    let dispStart = { dx: 0, dy: 0, dz: 0 };
-    let dispEnd = { dx: 0, dy: 0, dz: 0 };
-
-    if (resultType === 'deformed') {
-      dispStart = currentResults.displacements[startNode.id] || dispStart;
-      dispEnd = currentResults.displacements[endNode.id] || dispEnd;
-    }
-
-    const startPos = mapCoords(startNode, dispStart, deformationScale);
-    const endPos = mapCoords(endNode, dispEnd, deformationScale);
-
-    return { startPos, endPos };
-  };
+  // Generate 3D Grid from schema
+  const { xSpacing, ySpacing } = schema.grids;
+  const stories = schema.stories;
+  
+  // Calculate cumulative distances for grid lines
+  let currentX = 0;
+  const gridX = [0, ...xSpacing.map(dx => currentX += dx)];
+  
+  let currentY = 0;
+  const gridY = [0, ...ySpacing.map(dy => currentY += dy)];
 
   return (
-    <Canvas camera={{ position: [10, 10, 15], fov: 45 }}>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 10, 5]} intensity={1} />
-      <OrbitControls makeDefault />
-      <gridHelper args={[20, 20]} />
-
-      {frames.map((frame) => {
-        if (frame.type === 'column' && !showColumns) return null;
-        if (frame.type === 'beam' && !showBeams) return null;
-
-        const { startPos, endPos } = getFrameLine(frame);
-        const color = frame.type === 'column' ? '#3b82f6' : '#22c55e';
-
-        return (
-          <group key={frame.id}>
-            <Line points={[startPos, endPos]} color={color} lineWidth={3} />
-            {resultType === 'moment3_3' && currentResults.frameForces[frame.id]?.moment3_3 && (
-              <Line
-                points={[
-                  startPos,
-                  [
-                    (startPos[0] + endPos[0]) / 2,
-                    ((startPos[1] + endPos[1]) / 2) + (currentResults.frameForces[frame.id].moment3_3[1].value * diagramScale),
-                    (startPos[2] + endPos[2]) / 2
-                  ],
-                  endPos
-                ]}
-                color="red"
-                lineWidth={2}
-              />
-            )}
-          </group>
-        );
-      })}
-
-      {showSlabs && slabs.map((slab) => {
-        const slabNodes = slab.nodeIds.map(id => nodes.find(n => n.id === id));
-        const shape = new THREE.Shape();
+    <div className="w-full h-full">
+      <Canvas camera={{ position: [15, 15, 20], fov: 45 }}>
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[10, 10, 5]} intensity={1} />
+        <OrbitControls makeDefault />
         
-        slabNodes.forEach((node, index) => {
-          if (index === 0) shape.moveTo(node.x, node.y);
-          else shape.lineTo(node.x, node.y);
-        });
-        shape.lineTo(slabNodes[0].x, slabNodes[0].y);
+        {/* Draw 3D Base Grid */}
+        <gridHelper args={[30, 30, '#1e293b', '#0f172a']} position={[0, 0, 0]} />
 
-        const geometry = new THREE.ShapeGeometry(shape);
-        geometry.rotateX(Math.PI / 2);
-        geometry.translate(0, slabNodes[0].z, 0);
+        {/* Render Columns at grid intersections up to story heights */}
+        {gridX.map((x, ix) => 
+          gridY.map((y, iy) => (
+            <group key={`col-${ix}-${iy}`}>
+              <Line 
+                points={[[x, 0, y], [x, stories[1].elevation, y]]} 
+                color="#3b82f6" 
+                lineWidth={2} 
+              />
+            </group>
+          ))
+        )}
 
-        return (
-          <mesh key={slab.id} geometry={geometry}>
-            <meshBasicMaterial color="#94a3b8" transparent opacity={0.4} side={THREE.DoubleSide} />
+        {/* Render Floor Slabs (Translucent planes at story elevations) */}
+        {stories.map((story) => (
+          <mesh key={story.id} position={[gridX[gridX.length-1]/2, story.elevation, gridY[gridY.length-1]/2]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[gridX[gridX.length-1], gridY[gridY.length-1]]} />
+            <meshBasicMaterial color="#94a3b8" transparent opacity={0.2} side={THREE.DoubleSide} />
           </mesh>
-        );
-      })}
-    </Canvas>
+        ))}
+      </Canvas>
+    </div>
   );
 };
 
